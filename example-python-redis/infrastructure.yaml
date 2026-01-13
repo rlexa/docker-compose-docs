@@ -1,0 +1,4 @@
+services:
+  redis:
+    # use image from Docker Hub registry
+    image: "redis:alpine"

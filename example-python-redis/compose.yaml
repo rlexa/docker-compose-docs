@@ -1,0 +1,9 @@
+include:
+  - infrastructure.yaml
+services:
+  web:
+    # use image built from Dockerfile in current dir
+    build: .
+    ports:
+      # port 5000 (Flask) to port 8000
+      - "8000:5000"
