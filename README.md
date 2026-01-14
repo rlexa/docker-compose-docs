@@ -159,6 +159,97 @@ services:
       timeout: 10s # timeout for each check
 ```
 
+### Environment Variables
+
+- service level: `environment` attribute
+  - note: `"true"`, `"false"`, `"yes"`, `"no"` must be in quotes when used as map else YAML parses them as `True` or `False`
+  - note: is a variable can't be resolved to a value it is removed
+- service level: `env_file` attribute
+  - one or list of env files
+  - interpolation `${...}` is supported but only when run in compose context
+- CLI `-e` flag
+  - `docker compose run -e DEBUG=1 web python console.py`
+- precedence (low to high):
+  - image `ENV` or `ARG`
+  - compose file `env_file`
+  - compose file `environment`
+  - compose file `env_file` or `environment` but interpolated
+  - CLI `-e` flag
+
+```yaml
+services:
+  webapp:
+    env_file:
+      - path: ./default.env
+      - path: ./override.env
+        required: false # true is default
+    environment:
+      # DEBUG: "true" <<< same as...
+      - DEBUG=true
+      # will try to resolve from outside (shell command or .env file) or remove
+      - RESOLVEME
+      # same as above but will cause a warning if can't resolve
+      - RESOLVEMEORWARNING=${RESOLVEMEORWARNING}
+```
+
+#### Predefined Envvars
+
+- note: inherits Docker CLI envvars e.g. `DOCKER_HOST`, `DOCKER_CONTEXT` etc.
+- `COMPOSE_ANSI` output print ANSI control characters
+  - on `auto` (default) detects TTY (or `never` or `always` TTY)
+- `COMPOSE_CONVERT_WINDOWS_PATHS` converts volume definitions paths to Unix format
+  - on `1` or `true`
+- `COMPOSE_DISABLE_ENV_FILE` disables default `.env` file
+  - on `1` or `true`
+- `COMPOSE_ENV_FILES`
+- `COMPOSE_EXPERIMENTAL` opt out of experimental features
+  - on `0` or `false`
+- `COMPOSE_FILE` path (for multiple always set `COMPOSE_PATH_SEPARATOR` too)
+- `COMPOSE_IGNORE_ORPHANS` stops detecting orphaned (old config) containers
+  - on `1` or `true`
+- `COMPOSE_MENU` shows nav menu for opening in docker desktop
+- `COMPOSE_PARALLEL_LIMIT` for concurrent engine calls
+- `COMPOSE_PATH_SEPARATOR` if note set is `:` on Unix and `;` on Windows
+- `COMPOSE_PROFILES` separated by `,`
+- `COMPOSE_PROGRESS` output format `auto` (default), `tty`, `plain`, `json`, `quiet`
+- `COMPOSE_PROJECT_NAME` sets project name
+  - used as prefix in container name e.g. `projectname-servicename-1`
+- `COMPOSE_REMOVE_ORPHANS` stops removing orphaned (old config) containers
+  - on `1` or `true`
+- `COMPOSE_STATUS_STDOUT` writes internal status to stdout instead stderr
+  - on `1` or `true`
+  - note: stderr is used to separate from container output
+
+#### Interpolation
+
+Compose file can have variables that are interpolated at runtime removing the need of editing the file.
+
+- syntax
+  - applied to unquoted and double-quoted values
+    - _note: single-quoted values are not interpolated_
+    - _note: quotes can be escaped with `\"`_
+  - supports both `$VAR` and `${VAR}` interpolation
+  - `${VAR}` resolves to `VAR`
+  - `${VAR:-default}` resolves to `VAR || default` (`VAR` if set and not empty)
+  - `${VAR-default}` resolves to `VAR ?? default` (`VAR` if set)
+  - `${VAR:?error}` exits with error if `VAR` is not set or empty
+  - `${VAR?error}` exits with error if `VAR` is not set
+  - `${VAR:+replacement}` resolves to `replacement` if `VAR` is set and not empty, otherwise empty
+  - `${VAR+replacement}` resolves to `replacement` if `VAR` is set, otherwise empty
+- check with `docker compose config --environment`
+- reference `.env` file vars directly in `environment` attribute
+- example:
+  - in `.env` file: `TAG=v1.5`
+  - in compose file: `services: web: image: "webapp:${TAG}"`
+  - check with `docker compose config`
+    - `services: web: image: 'webapp:v1.5'`
+- example:
+  - in `.env` file: `COMPOSE_DEBUG=${DEV_MODE:-false}`
+    - set to value of dev mode else false
+  - in compose file: `services: web: environment: - DEBUG=${COMPOSE_DEBUG}`
+  - check with `DEV_MODE=true docker compose config`
+    - `services: web: environment: DEBUG: "true"`
+
 ## Compose CLI
 
 - use `docker compose` as command
@@ -182,3 +273,12 @@ The order is somewhat important.
   - `./run_tests`
   - `docker compose down -v` (use `-v` to remove volumes)
 - compose does not wait for containers to be "ready", just for "running" i.e. use e.g. `depends_on` attribute to make sure of the order
+- place `.env` file in root of project as standard practice
+  - experiment: go to a nested dir, create `.env` with `COMPOSE_FILE=../compose.yaml` and overrides and compose from there to have a quick override test
+- see service env with `docker-compose run servicename env`
+- do not forget to consider:
+  - env var interpolation for compose file stability
+  - project `name` for different environments
+  - service hooks `post_start` and `pre_stop`
+  - service `profiles` for optional services
+  - service dependency chains with `depends_on`
