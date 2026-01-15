@@ -250,6 +250,44 @@ Compose file can have variables that are interpolated at runtime removing the ne
   - check with `DEV_MODE=true docker compose config`
     - `services: web: environment: DEBUG: "true"`
 
+### Images
+
+- try to reduce pull/push time and image weight
+- use services that share base layers e.g.
+  - same image layer OS for all services
+  - same image layer after installing system packages
+- see also re-using service base images
+- see also using "Bake" build system
+
+Example: all services use `alpine` and need `openssl`.
+
+```Dockerfile
+# Dockerfile
+
+FROM alpine as base
+RUN /bin/sh -c apk add --update --no-cache openssl
+
+FROM base as service_a
+# build service a
+...
+
+FROM base as service_b
+# build service b
+...
+```
+
+```yaml
+# compose.yaml
+
+services:
+  a:
+    build:
+      target: service_a
+  b:
+    build:
+      target: service_b
+```
+
 ## Compose CLI
 
 - use `docker compose` as command
