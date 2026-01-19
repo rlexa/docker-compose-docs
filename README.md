@@ -524,11 +524,113 @@ services:
 
 #### Extend Compose Files
 
-TODO
+- `extends` top level key, useful for common set of config options
+- same path and completion rules from merging apply here too
+
+```yaml
+# common-services.yml
+
+services:
+  webapp:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - "/data"
+
+# compose.yaml
+
+services:
+  web:
+    build: alpine
+    command: echo
+    extends:
+      file: common-services.yml
+      service: webapp
+  webapp:
+    extends:
+      file: common-services.yml
+      service: webapp
+  important_web:
+    extends: web
+    cpu_shares: 10
+```
+
+Another example:
+
+```yaml
+# common.yaml
+
+services:
+  app:
+    build: .
+    environment:
+      CONFIG_FILE_PATH: /code/config
+      API_KEY: xxxyyy
+    cpu_shares: 5
+
+# compose.yaml
+
+services:
+  webapp:
+    extends:
+      file: common.yaml
+      service: app
+    command: /code/run_web_app
+    ports:
+      - 8080:8080
+    depends_on:
+      - queue
+      - db
+
+  queue_worker:
+    extends:
+      file: common.yaml
+      service: app
+    command: /code/run_worker
+    depends_on:
+      - queue
+```
 
 #### Include Compose Files
 
-TODO
+- `include` top level key allows modularized compose files
+- _note: best for teams as every team can manage it's own file_
+- _note: best for resolving path issues as every file is it's own app context_
+
+```yaml
+include:
+  - my-compose-include.yaml # declares serviceB
+  # ...or use from OCI artifact, Docker Hub
+  # - oci://docker.io/username/my-compose-app:latest
+services:
+  serviceA:
+    build: .
+    depends_on:
+      - serviceB # uses serviceB
+```
+
+Override example:
+
+```yaml
+# compose.yaml
+
+include:
+  - team-1/compose.yaml # declare service-1
+  - team-2/compose.yaml # declare service-2
+
+# compose.override.yaml
+
+services:
+  service-1:
+    # enable debugger port
+    ports:
+      - 2345:2345
+  service-2:
+    # use local data folder containing test data
+    volumes:
+      - ./data:/data
+```
 
 ## Compose CLI
 
@@ -564,3 +666,4 @@ The order is somewhat important.
   - service hooks `post_start` and `pre_stop`
   - service `profiles` for optional services
   - service dependency chains with `depends_on`
+- GPU access can be activated if services can make use of it
