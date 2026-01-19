@@ -9,6 +9,7 @@
   - [Images](#images)
   - [Secrets](#secrets)
   - [Network](#network)
+  - [Multiple Compose Files](#multiple-compose-files)
 - [Compose CLI](#compose-cli)
 - [Examples](#examples)
 - [Hints](#hints)
@@ -455,6 +456,80 @@ networks:
     external: true
 ```
 
+### Multiple Compose Files
+
+- default: `compose.yaml` and `compose.override.yaml`
+  - i.e. base config and service overrides or added services
+
+#### Merge Compose Files
+
+- e.g. `docker compose -f compose.yaml -f compose.admin.yaml run backup_db`
+- first is base, others are overrides
+  - overrides need not be complete compose files
+  - override keys either add or override (when exist already) values
+  - multi-values are concatenated
+- apply order is left to right
+- paths are relative to base file (the first `-f` file)
+
+```yaml
+# compose.yaml: base
+
+services:
+  web:
+    image: example/my_web_app:latest
+    depends_on:
+      - db
+      - cache
+  db:
+    image: postgres:18
+  cache:
+    image: redis:latest
+
+# compose.override.yaml: DEV
+# `docker compose up`
+
+services:
+  web:
+    build: .
+    volumes:
+      - '.:/code'
+    ports:
+      - 8883:80
+    environment:
+      DEBUG: 'true'
+
+  db:
+    command: '-d'
+    ports:
+     - 5432:5432
+
+  cache:
+    ports:
+      - 6379:6379
+
+# compose.prod.yaml: PROD
+# `docker compose -f compose.yaml -f compose.prod.yaml up -d`
+
+services:
+  web:
+    ports:
+      - 80:80
+    environment:
+      PRODUCTION: 'true'
+
+  cache:
+    environment:
+      TTL: '500'
+```
+
+#### Extend Compose Files
+
+TODO
+
+#### Include Compose Files
+
+TODO
+
 ## Compose CLI
 
 - use `docker compose` as command
@@ -462,6 +537,7 @@ networks:
   - `down`: stops and removes all running services
   - `ps`: shows all running services and statuses
   - `logs`: monitors logs of all running services
+  - `pull`: pulls newest images (or defined image only)
 
 ## Examples
 
