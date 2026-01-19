@@ -10,6 +10,7 @@
   - [Secrets](#secrets)
   - [Network](#network)
   - [Multiple Compose Files](#multiple-compose-files)
+- [Compose in Prod](#compose-in-prod)
 - [Compose CLI](#compose-cli)
 - [Examples](#examples)
 - [Hints](#hints)
@@ -632,6 +633,21 @@ services:
       - ./data:/data
 ```
 
+## Compose in Prod
+
+- use `compose.yaml` and `compose.production.yaml`
+- exec with `docker compose -f compose.yaml -f compose.production.yaml up -d`
+- on app code changes:
+  - rebuild image
+  - recreate containers
+  - redeploy e.g.:
+    - `docker compose build web`
+      - rebuilds image
+    - `docker compose up --no-deps -d web`
+      - stops, destroys, recreates web
+      - `--no-deps` does not restart services web depends on
+- _note: use `DOCKER_HOST`, `DOCKER_TLS_VERIFY` and `DOCKER_CERT_PATH` to deploy to a remote Docker host_
+
 ## Compose CLI
 
 - use `docker compose` as command
@@ -667,3 +683,4 @@ The order is somewhat important.
   - service `profiles` for optional services
   - service dependency chains with `depends_on`
 - GPU access can be activated if services can make use of it
+- compose apps can be published as OCI artifacts (look it up)
