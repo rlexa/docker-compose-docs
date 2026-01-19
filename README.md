@@ -1,6 +1,14 @@
 # Docker Compose
 
 - [Compose File](#compose-file)
+  - [Project Name](#project-name)
+  - [Lifecycle Hooks](#lifecycle-hooks)
+  - [Profiles](#profiles)
+  - [Startup and Shutdown Control](#startup-and-shutdown-control)
+  - [Environment Variables](#environment-variables)
+  - [Images](#images)
+  - [Secrets](#secrets)
+  - [Network](#network)
 - [Compose CLI](#compose-cli)
 - [Examples](#examples)
 - [Hints](#hints)
@@ -288,6 +296,165 @@ services:
       target: service_b
 ```
 
+### Secrets
+
+- secret: any piece of sensitive data (pwd, cert, API key)
+- mounted as `/run/secrets/<secret_name>` file in a container
+  - define secrets at compose file top-level
+  - bind services to secrets via `secrets` attribute
+
+Simple examples:
+
+```yaml
+services:
+  myapp:
+    build:
+      secrets:
+        - npm_token
+      context: .
+
+secrets:
+  npm_token:
+    environment: NPM_TOKEN # from envvar
+```
+
+```yaml
+secrets:
+  my_secret:
+    file: ./my_secret.txt
+services:
+  myapp:
+    image: myapp:latest
+    secrets:
+      # available as `/run/secrets/my_secret` file
+      - my_secret
+```
+
+Advanced example:
+
+```yaml
+volumes:
+  db_data:
+
+secrets:
+  db_password:
+    file: db_password.txt
+  db_root_password:
+    file: db_root_password.txt
+
+services:
+  db:
+    image: mysql:latest
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_root_password
+      - db_password
+
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    ports:
+      - "8000:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+```
+
+### Network
+
+- default:
+  - single network with current project name
+  - all containers can reach each other
+    - _note: internally `CONTAINER_PORT` is used_
+  - containers are discoverable by service name
+    - _note: on updating containers are replaced with new IPs, use names_
+  - _note_: can be configured via top level `networks: default: ...` entry
+- _note: multi-host swarm mode is possible, look it up_
+
+```yaml
+# myapp/compose.yaml
+
+# network: myapp_default
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    # optional, not really needed
+    links:
+      # here: adds an alias to "db" and marks it as dependency
+      - "db:database"
+  # e.g. web can connect to db via `postgres://db:5432`
+  db:
+    image: postgres:18
+    ports:
+      # HOST_PORT:CONTAINER_PORT
+      # outside of network db is accessible via 8001
+      # e.g. `postgres://{DOCKER_IP}:8001`
+      - "8001:5432"
+```
+
+#### Custom networks
+
+- `networks` top level key defines custom networks
+  - can define custom drivers
+  - can connect services to non-compose outside networks
+  - can have custom `name`
+  - can have static IP addresses (look it up)
+- `networks` service level key can reference the defined networks
+
+```yaml
+networks:
+  frontend:
+    # Specify driver options
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+  backend:
+    # Use a custom driver
+    driver: custom-driver
+services:
+  proxy:
+    build: ./proxy
+    # proxy can't talk to backend network
+    networks:
+      - frontend
+  app:
+    build: ./app
+    # app can talk to both networks
+    networks:
+      - frontend
+      - backend
+  db:
+    image: postgres:18
+    # db can't talk to frontend network
+    networks:
+      - backend
+```
+
+#### External networks
+
+- e.g. when creating a network via `docker network create`
+
+```yaml
+networks:
+  # won't create default network and looks for `my-pre-existing-network` instead
+  network1:
+    name: my-pre-existing-network
+    external: true
+```
+
 ## Compose CLI
 
 - use `docker compose` as command
@@ -314,6 +481,7 @@ The order is somewhat important.
 - place `.env` file in root of project as standard practice
   - experiment: go to a nested dir, create `.env` with `COMPOSE_FILE=../compose.yaml` and overrides and compose from there to have a quick override test
 - see service env with `docker-compose run servicename env`
+- check docs for images to support secrets via envvar which read from files (because secrets are provided as files)
 - do not forget to consider:
   - env var interpolation for compose file stability
   - project `name` for different environments
