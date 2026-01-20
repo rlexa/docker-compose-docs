@@ -59,7 +59,7 @@ Use for isolating environments:
 - CI: set to unique build number preventing build interference
 - shared host: prevent interference between different apps that happen to use the same service names
 
-Precendence (low to high):
+Precedence (low to high):
 
 - current dir
 - dir or base name of first compose file (when using `-f`)
