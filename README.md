@@ -10,6 +10,7 @@
   - [Secrets](#secrets)
   - [Network](#network)
   - [Multiple Compose Files](#multiple-compose-files)
+  - [Provider Services](#provider-services)
 - [Compose in Prod](#compose-in-prod)
 - [Compose CLI](#compose-cli)
 - [Examples](#examples)
@@ -633,6 +634,36 @@ services:
       - ./data:/data
 ```
 
+### Provider Services
+
+- `provider` attribute connects to a 3rd party components
+  - think of platform capabilities made available for compose
+  - `type` attribute can be:
+    - Docker CLI plugin
+    - binary in user's `PATH`
+    - path to binary or script to execute
+- provided info injected into services as envvars `<PROVIDER_SERVICE_NAME>_<VARIABLE_NAME>`
+  - e.g. service with `provider` is named `database`:
+    - might inject `DATABASE_URL`, `DATABASE_TOKEN` etc.
+- _note: custom providers can be implemented manually_
+
+```yaml
+services:
+  database:
+    # marked as provider service
+    provider:
+      # choose a supported provider type
+      type: awesomecloud
+      # provider specific options
+      options:
+        type: mysql
+        foo: bar
+  app:
+    image: myapp
+    depends_on:
+      - database
+```
+
 ## Compose in Prod
 
 - use `compose.yaml` and `compose.production.yaml`
@@ -651,11 +682,17 @@ services:
 ## Compose CLI
 
 - use `docker compose` as command
-  - `up`: starts all compose file services
   - `down`: stops and removes all running services
-  - `ps`: shows all running services and statuses
   - `logs`: monitors logs of all running services
+  - `ps`: shows all running services and statuses
   - `pull`: pulls newest images (or defined image only)
+  - `run`: for one-off commands
+    - e.g. tests, adding data
+  - `start`: starts stopped containers but does never create any
+  - `stop`: stops a container
+    - sends `SIGTERM`, waits default 10s, sends `SIGKILL`
+  - `up`: starts all compose file services
+    - `-d` for detached mode
 
 ## Examples
 
@@ -684,3 +721,9 @@ The order is somewhat important.
   - service dependency chains with `depends_on`
 - GPU access can be activated if services can make use of it
 - compose apps can be published as OCI artifacts (look it up)
+- always use exec form `CMD` and `ENTRYPOINT`
+  - always use `["program", "arg1", "arg2"]` and not `program arg1 arg2`
+    - _note: string form will use bash which doesn't eval `SIGTERM`_
+  - make sure to eval `SIGTERM` when possible
+  - set service level `stop_signal: SIGINT` to a signal it can handle
+  - if not possible wrap app in init system like `s6` or `tini`
