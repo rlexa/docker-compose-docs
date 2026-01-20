@@ -16,7 +16,7 @@
 - [Examples](#examples)
 - [Hints](#hints)
 
-Tool that in a singly YAML file manages services, networks and volumes. The "Compose File" `compose.yaml` follows the [Compose File Format](https://docs.docker.com/compose/compose-file/). The "Compose CLI" is then used to create and start the services.
+Tool that in a single YAML file manages services, networks and volumes. The "Compose File" `compose.yaml` follows the [Compose File Format](https://docs.docker.com/compose/compose-file/). The "Compose CLI" is then used to create and start the services.
 
 - `application model`: all compose files merged together
 - `service`: runs same container image and configuration one or more times
