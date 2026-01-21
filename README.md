@@ -667,6 +667,7 @@ services:
 
 ## Logging
 
+- default `"log-driver": "json-file"`
 - _note: always try and set limits_
 
 ```yaml
