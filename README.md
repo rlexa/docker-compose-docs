@@ -11,6 +11,7 @@
   - [Network](#network)
   - [Multiple Compose Files](#multiple-compose-files)
   - [Provider Services](#provider-services)
+  - [Logging](#logging)
 - [Compose in Prod](#compose-in-prod)
 - [Compose CLI](#compose-cli)
 - [Examples](#examples)
@@ -662,6 +663,19 @@ services:
     image: myapp
     depends_on:
       - database
+```
+
+## Logging
+
+- _note: always try and set limits_
+
+```yaml
+services:
+  database:
+    logging:
+      options:
+        max-size: "50m"
+        max-file: "5"
 ```
 
 ## Compose in Prod
