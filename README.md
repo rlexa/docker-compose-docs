@@ -708,6 +708,8 @@ services:
     - sends `SIGTERM`, waits default 10s, sends `SIGKILL`
   - `up`: starts all compose file services
     - `-d` for detached mode
+  - `wait`: starts and waits for services to be healthy
+    - logs state transitions
 
 ## Examples
 
