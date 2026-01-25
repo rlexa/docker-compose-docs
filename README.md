@@ -698,6 +698,8 @@ services:
 
 - use `docker compose` as command
   - `down`: stops and removes all running services
+  - `exec`: runs a command in a running container
+    - e.g. `docker compose exec myservice bash`
   - `logs`: monitors logs of all running services
   - `ps`: shows all running services and statuses
   - `pull`: pulls newest images (or defined image only)
